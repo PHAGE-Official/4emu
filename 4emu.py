@@ -4,14 +4,15 @@ top=t.Tk()
 running_file='Boot'
 ax=bx=cx=dx=0
 cs=0b1111         #the maxium value is 0b1111
-es=ds=ss=0
+es=ds=ss=0b0000
+ip=sp=bp=bi=0b0000
 lax=lbx=lcx=ldx=None
 lcs=lds=lss=les=None
+lip=lbp=lsp=lbi=None
 #set the window attributes
 top.title('4emu      -'+running_file)
 top.geometry('800x600+400+200')
 top.configure(bg='#cccccc')
-top.attributes('-alpha',0.9)
 top.resizable(0,0)
 #screen class
 class monitor:
@@ -24,13 +25,13 @@ class monitor:
             lbx.destroy()
             lcx.destroy()
             ldx.destroy()
-        lax=t.Label(text=('AX:',hex(ax)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        lax=t.Label(text=('AX:',bin(ax)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lax.place(x=0,y=0)
-        lbx=t.Label(text=('BX:',hex(bx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        lbx=t.Label(text=('BX:',bin(bx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lbx.place(x=0,y=25)
-        lcx=t.Label(text=('CX:',hex(cx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        lcx=t.Label(text=('CX:',bin(cx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lcx.place(x=0,y=50)
-        ldx=t.Label(text=('BX:',hex(bx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        ldx=t.Label(text=('BX:',bin(bx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         ldx.place(x=0,y=75)
     def seg_reg():
         global lcs,lds,lss,les
@@ -39,14 +40,33 @@ class monitor:
             lds.destroy()
             lss.destroy()
             les.destroy()
-        lcs=t.Label(text=('CS:',hex(cs)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        lcs=t.Label(text=('CS:',bin(cs)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lcs.place(x=0,y=100)
-        lds=t.Label(text=('DS:',hex(ds)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        lds=t.Label(text=('DS:',bin(ds)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lds.place(x=0,y=125)
-        lss=t.Label(text=('ES:',hex(es)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        lss=t.Label(text=('ES:',bin(es)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lss.place(x=0,y=150)
-        les=t.Label(text=('SS:',hex(ss)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        les=t.Label(text=('SS:',bin(ss)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         les.place(x=0,y=175)
+    def ptr_reg():
+        global lip,lsp,lbp,lbi
+        if lip != None and lsp != None and lbp != None and lbi != None:
+            lip.destroy()
+            lsp.destroy()
+            lbp.destroy()
+            lbi.destroy()
+        lip=t.Label(text=('IP:',bin(ip)),fg='#000000',bg='#ffffff',anchor='w',width=10)
+        lip.place(x=80,y=0)
+        lsp=t.Label(text=('SP:',bin(sp)),fg='#000000',bg='#ffffff',anchor='w',width=10)
+        lsp.place(x=80,y=25)
+        lbp=t.Label(text=('BP:',bin(bp)),fg='#ffff00',bg='#0000ff',anchor='w',width=10)
+        lbp.place(x=80,y=50)
+        lbi=t.Label(text=('BI:',bin(bi)),fg='#ffff00',bg='#0000ff',anchor='w',width=10)
+        lbi.place(x=80,y=75)
+    def vga_opt():
+        w=t.Canvas(width=320,height=240,bg='#000000')
+        w.place(x=470,y=0)
+        w.create_text(5,0,text='VPS is loading...',tag='boot',fill='#ff0000',anchor='nw')
 #command class
 class cmd:
     def mov(reg,fig):
@@ -60,7 +80,7 @@ class cmd:
         if reg=='dx':
             dx=fig
         monitor.reg()
-        print('mov',reg,hex(fig))
+        print('mov',reg,bin(fig))
     def movs(seg_reg,reg):
         global cs,ds,es,ss
         if seg_reg == 'cs':
@@ -83,16 +103,22 @@ class cmd:
                 ds=dx
         monitor.seg_reg()
         print('mov',seg_reg,reg)
+    def movp(ptr_reg,fig):
+        global ip,bp,sp,bi
+        if ptr_reg == 'ip':
+            ip = fig
+        monitor.ptr_reg()
+        print('mov',ptr_reg,bin(fig))
 #CPU class
 class cpu:
     def self_check():
-        print('CS set as',hex(cs))
+        print('CS set as',bin(cs))
     def read():
         pass
 #RAM classs
 class ram():
     def segment(ip):
-        global cs
+        global cs,seg
         #create a virtual random access memory
         #最大地址为75, 0x0f x 0x04 +0x0f
         seg=[0,0,0,0,0,
@@ -119,13 +145,24 @@ class ram():
         adr=cs*4+ip
         print('point at number',adr,'adress')
         print(seg[adr])
+        print('default RAM:',len(seg),'bit')
+    def check():
+        global cs,ip,adr,seg
+        adr = cs * 4 + ip
+        print('point at number',adr,'adress')
+        print('data=',seg[adr])
 class boot:
     def bios():
         cmd.mov('ax',2)
         cmd.movs('cs','ax')
-        cmd.movs('ds','ax')
+        cmd.movp('ip',3)
+        ram.check()
+class hotkey():
+    #This class define a large sum of functions of hotkey such as power off/power on
+    #later will add VGA on/off
 monitor.info()
 cpu.self_check()
 ram.segment(0b1111)
 boot.bios()
+monitor.vga_opt()
 top.mainloop()
