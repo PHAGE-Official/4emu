@@ -9,6 +9,8 @@ ip=sp=bp=bi=0b0000
 lax=lbx=lcx=ldx=None
 lcs=lds=lss=les=None
 lip=lbp=lsp=lbi=None
+lpr=None
+powerstate=1
 #set the window attributes
 top.title('4emu      -'+running_file)
 top.geometry('800x600+400+200')
@@ -64,6 +66,7 @@ class monitor:
         lbi=t.Label(text=('BI:',bin(bi)),fg='#ffff00',bg='#0000ff',anchor='w',width=10)
         lbi.place(x=80,y=75)
     def vga_opt():
+        global w
         w=t.Canvas(width=320,height=240,bg='#000000')
         w.place(x=470,y=0)
         w.create_text(5,0,text='VPS is loading...',tag='boot',fill='#ff0000',anchor='nw')
@@ -109,15 +112,34 @@ class cmd:
             ip = fig
         monitor.ptr_reg()
         print('mov',ptr_reg,bin(fig))
+    def add(reg,fig):
+        global ax,bx,cx,dx
+        if reg == 'ax':
+            ax=ax+fig
+            print('ax is',bin(ax))
+        if reg == 'bx':
+            bx=bx+fig
+        if reg == 'cx':
+            cx=cx+fig
+        if reg == 'dx':
+            dx=dx+fig
+        monitor.reg()
+    def loop():
+        pass
+        cpu.tran()
 #CPU class
 class cpu:
     def self_check():
         print('CS set as',bin(cs))
     def read():
         pass
+    def write():
+        pass
+    def tran(): #this function help us translate figure to command
+        pass
 #RAM classs
-class ram():
-    def segment(ip):
+class rom():
+    def bios(ip):
         global cs,seg
         #create a virtual random access memory
         #最大地址为75, 0x0f x 0x04 +0x0f
@@ -156,13 +178,29 @@ class boot:
         cmd.mov('ax',2)
         cmd.movs('cs','ax')
         cmd.movp('ip',3)
-        ram.check()
+        rom.check()
+        cmd.mov('cx',5)
+        cmd.add('ax',10)
 class hotkey():
     #This class define a large sum of functions of hotkey such as power off/power on
     #later will add VGA on/off
-monitor.info()
-cpu.self_check()
-ram.segment(0b1111)
-boot.bios()
-monitor.vga_opt()
+    def power():
+        global powerstate,w
+        if powerstate == 1:
+            print('power off')
+            powerstate =0
+            w.delete('all')
+        else:
+            print('power on')
+            powerstate = 1
+            bus()
+b=t.Button(text='power',width=10,command=hotkey.power)
+b.place(x=710,y=250)
+def bus():
+    monitor.info()
+    cpu.self_check()
+    rom.bios(0b1111)
+    boot.bios()
+    monitor.vga_opt()
+bus()
 top.mainloop()
