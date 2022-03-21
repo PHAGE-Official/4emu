@@ -96,10 +96,9 @@ class cmd:
             dx=fig
             reg_flag=1
         monitor.reg()
-        seg[cs*4+ip]=1  #mov的开头标志位为1
-        ip=ip+1         #下一位
-        seg[cs*4+ip]=reg_flag  #mov的第二位为寄存器类
-                            #0代表ax或bx,1代表cx或dx
+        seg[cs*4+ip]=1
+        ip=ip+1
+        seg[cs*4+ip]=reg_flag
         print('mov',reg,bin(fig))
         print('bios rom:',seg)
     def movs(seg_reg,reg):
@@ -180,7 +179,7 @@ class rom():
              0,0,0,0,0,
              0]
         if cs*4+ip > 75:
-            print('overflow')   #overflow alert,溢出警告
+            print('overflow')
             #reset
             cs=0
             ip=0
@@ -211,6 +210,7 @@ class boot:
 class user:
     def ramarrange():
         from exRAM import arrange
+        #this is a new module!!!!🦾🦾🦾
         arrange.manual_arrange()
 
 
