@@ -11,11 +11,17 @@ lcs=lds=lss=les=None
 lip=lbp=lsp=lbi=None
 lpr=None
 powerstate=1
+
+
+
 #set the window attributes
 top.title('4emu      -'+running_file)
 top.geometry('800x600+400+200')
 top.configure(bg='#cccccc')
 top.resizable(0,0)
+
+
+
 #screen class
 class monitor:
     def info():
@@ -33,7 +39,7 @@ class monitor:
         lbx.place(x=0,y=25)
         lcx=t.Label(text=('CX:',bin(cx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         lcx.place(x=0,y=50)
-        ldx=t.Label(text=('BX:',bin(bx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
+        ldx=t.Label(text=('DX:',bin(dx)),fg='#ffffff',bg='#000000',anchor='w',width=10)
         ldx.place(x=0,y=75)
     def seg_reg():
         global lcs,lds,lss,les
@@ -70,20 +76,32 @@ class monitor:
         w=t.Canvas(width=320,height=240,bg='#000000')
         w.place(x=470,y=0)
         w.create_text(5,0,text='VPS is loading...',tag='boot',fill='#ff0000',anchor='nw')
+
+
+
 #command class
 class cmd:
     def mov(reg,fig):
-        global ax,bx,cx,dx
+        global ax,bx,cx,dx,seg,cs,ip
         if reg=='ax':
             ax=fig
+            reg_flag=0
         if reg=='bx':
             bx=fig
+            reg_flag=0
         if reg=='cx':
             cx=fig
+            reg_flag=1
         if reg=='dx':
             dx=fig
+            reg_flag=1
         monitor.reg()
+        seg[cs*4+ip]=1  #mov的开头标志位为1
+        ip=ip+1         #下一位
+        seg[cs*4+ip]=reg_flag  #mov的第二位为寄存器类
+                            #0代表ax或bx,1代表cx或dx
         print('mov',reg,bin(fig))
+        print('bios rom:',seg)
     def movs(seg_reg,reg):
         global cs,ds,es,ss
         if seg_reg == 'cs':
@@ -110,6 +128,7 @@ class cmd:
         global ip,bp,sp,bi
         if ptr_reg == 'ip':
             ip = fig
+            print(seg[cs*4+ip])
         monitor.ptr_reg()
         print('mov',ptr_reg,bin(fig))
     def add(reg,fig):
@@ -124,9 +143,9 @@ class cmd:
         if reg == 'dx':
             dx=dx+fig
         monitor.reg()
-    def loop():
+    def jmp():
         pass
-        cpu.tran()
+        
 #CPU class
 class cpu:
     def self_check():
@@ -135,8 +154,9 @@ class cpu:
         pass
     def write():
         pass
-    def tran(): #this function help us translate figure to command
-        pass
+        
+
+
 #RAM classs
 class rom():
     def bios(ip):
@@ -173,6 +193,9 @@ class rom():
         adr = cs * 4 + ip
         print('point at number',adr,'adress')
         print('data=',seg[adr])
+
+
+        
 class boot:
     def bios():
         cmd.mov('ax',2)
@@ -181,14 +204,32 @@ class boot:
         rom.check()
         cmd.mov('cx',5)
         cmd.add('ax',10)
+        cmd.jmp()
+
+
+
+class user:
+    def ramarrange():
+        from exRAM import arrange
+        arrange.manual_arrange()
+
+
+
 class hotkey():
     #This class define a large sum of functions of hotkey such as power off/power on
     #later will add VGA on/off
     def power():
-        global powerstate,w
+        global powerstate,w,ax,bx,cx,dx
+        global es,ds,ss,cs,ip,bp,sp,bi
         if powerstate == 1:
             print('power off')
             powerstate =0
+            ax=bx=cx=dx=0
+            es=ds=ss=cs=0
+            ip=bp=sp=bi=0
+            monitor.reg()
+            monitor.seg_reg()
+            monitor.ptr_reg()
             w.delete('all')
         else:
             print('power on')
@@ -196,11 +237,15 @@ class hotkey():
             bus()
 b=t.Button(text='power',width=10,command=hotkey.power)
 b.place(x=710,y=250)
+
+
+
 def bus():
     monitor.info()
     cpu.self_check()
     rom.bios(0b1111)
     boot.bios()
     monitor.vga_opt()
+    user.ramarrange()
 bus()
 top.mainloop()
