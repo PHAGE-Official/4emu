@@ -3,7 +3,7 @@ top=t.Tk()
 #variable
 running_file='Boot'
 ax=bx=cx=dx=0
-cs=0b1111         #the maxium value is 0b1111
+cs=0b11        #the maxium value is 0b11
 es=ds=ss=0b0000
 ip=sp=bp=bi=0b0000
 lax=lbx=lcx=ldx=None
@@ -24,11 +24,9 @@ top.resizable(0,0)
 
 #screen class
 class monitor:
-    def info():
-        print('Phage Virtual Monitor Version 101\nRAM:None\nROM:None\nCPU:Virtual P4010 @ 0.5 MHZ')
     def reg():
-        global lax,lbx,lcx,ldx
-        if lax != None and lbx != None and lcx != None and ldx!=None:
+        global lax,lcx,lbx,ldx
+        if lax != None and lbx != None and cx != None and ldx != None:
             lax.destroy()
             lbx.destroy()
             lcx.destroy()
@@ -82,68 +80,83 @@ class monitor:
 #command class
 class cmd:
     def mov(reg,fig):
-        global ax,bx,cx,dx,seg,cs,ip
+        global ax,cx,seg,cs,ip
         if reg=='ax':
             ax=fig
             reg_flag=0
+            reg_de=0
         if reg=='bx':
             bx=fig
             reg_flag=0
+            reg_de=1
         if reg=='cx':
             cx=fig
             reg_flag=1
+            reg_de=0
         if reg=='dx':
             dx=fig
             reg_flag=1
+            reg_de=1
         monitor.reg()
-        seg[cs*4+ip]=1
-        ip=ip+1
+
+#------------------------------------------------translate mech-------------------------------------
+
+        for i in range(0,2):
+            seg[cs*4+ip]=0  #mov的开头标志位为0
+            ip=ip+1         #下一位
         seg[cs*4+ip]=reg_flag
-        print('mov',reg,bin(fig))
-        print('bios rom:',seg)
+        ip=ip+1
+        seg[cs*4+ip]=reg_de
+        #第三位为寄存器类
+        #the third bit means the sort of register
+        #0代表ax或bx,1代表cx或dx
+        #0 means ax or bx while 1 means cx or dx
+        #第四位表示具体寄存器
+        
+        if fig>15:
+            assert()
+            #fig < 0b11
+        ip=ip+4
+        print(fig)
+        for i in range(0,4):
+            fig_m=fig%2     #取余,二进制高位   mod and the result is binary high bit
+            fig=int(fig/2)      #向下取整          round down
+            seg[cs*4+ip]=fig_m
+            ip=ip-1
+        ip=ip+5
+        print(seg)
+#------------------------------------------------translation end-------------------------------------
     def movs(seg_reg,reg):
         global cs,ds,es,ss
         if seg_reg == 'cs':
             if reg == 'ax':
                 cs=ax
-            if reg == 'bx':
-                cs=bx
             if reg == 'cx':
                 cs=cx
-            if reg == 'dx':
-                cs=dx
         if seg_reg == 'ds':
             if reg == 'ax':
                 ds=ax
-            if reg == 'bx':
-                ds=bx
             if reg == 'cx':
                 ds=cx
-            if reg == 'dx':
-                ds=dx
         monitor.seg_reg()
         print('mov',seg_reg,reg)
     def movp(ptr_reg,fig):
         global ip,bp,sp,bi
         if ptr_reg == 'ip':
             ip = fig
-            print(seg[cs*4+ip])
         monitor.ptr_reg()
         print('mov',ptr_reg,bin(fig))
     def add(reg,fig):
-        global ax,bx,cx,dx
+        global ax,cx
         if reg == 'ax':
             ax=ax+fig
-            print('ax is',bin(ax))
-        if reg == 'bx':
-            bx=bx+fig
         if reg == 'cx':
             cx=cx+fig
-        if reg == 'dx':
-            dx=dx+fig
         monitor.reg()
-    def jmp():
-        pass
+    def jmp(seg_reg,fig=0,reg=0):
+        global cs,ip,adr
+        adr=cs*4+ip
+        print('jump to',adr)
         
 #CPU class
 class cpu:
@@ -153,7 +166,7 @@ class cpu:
         pass
     def write():
         pass
-        
+
 
 
 #RAM classs
@@ -161,7 +174,7 @@ class rom():
     def bios(ip):
         global cs,seg
         #create a virtual random access memory
-        #最大地址为75, 0x0f x 0x04 +0x0f
+        #最大地址为15, 0b11 x 4 +0b11
         seg=[0,0,0,0,0,
              0,0,0,0,0,
              0,0,0,0,0,
@@ -178,53 +191,44 @@ class rom():
              0,0,0,0,0,
              0,0,0,0,0,
              0]
-        if cs*4+ip > 75:
-            print('overflow')
+        if cs*4+ip > 16:
             #reset
             cs=0
             ip=0
         adr=cs*4+ip
-        print('point at number',adr,'adress')
         print(seg[adr])
         print('default RAM:',len(seg),'bit')
     def check():
         global cs,ip,adr,seg
         adr = cs * 4 + ip
-        print('point at number',adr,'adress')
-        print('data=',seg[adr])
 
 
         
 class boot:
     def bios():
         cmd.mov('ax',2)
-        cmd.movs('cs','ax')
-        cmd.movp('ip',3)
+        cmd.mov('bx',1)
+        #cmd.jmp('cs','ax')
         rom.check()
-        cmd.mov('cx',5)
-        cmd.add('ax',10)
-        cmd.jmp()
 
 
 
 class user:
     def ramarrange():
         from exRAM import arrange
-        #this is a new module!!!!🦾🦾🦾
         arrange.manual_arrange()
+        arrange.create_RAM(12)
 
 
 
 class hotkey():
     #This class define a large sum of functions of hotkey such as power off/power on
-    #later will add VGA on/off
     def power():
-        global powerstate,w,ax,bx,cx,dx
+        global powerstate,w,ax,cx
         global es,ds,ss,cs,ip,bp,sp,bi
         if powerstate == 1:
-            print('power off')
             powerstate =0
-            ax=bx=cx=dx=0
+            ax=cx=0
             es=ds=ss=cs=0
             ip=bp=sp=bi=0
             monitor.reg()
@@ -232,20 +236,34 @@ class hotkey():
             monitor.ptr_reg()
             w.delete('all')
         else:
-            print('power on')
             powerstate = 1
             bus()
+    def soundblaster():
+        pass
+        # we will add a 4-bit sb later
 b=t.Button(text='power',width=10,command=hotkey.power)
 b.place(x=710,y=250)
 
 
 
 def bus():
-    monitor.info()
     cpu.self_check()
     rom.bios(0b1111)
     boot.bios()
     monitor.vga_opt()
     user.ramarrange()
+
+
+
+def oscheck():
+    import platform
+    os=platform.system()
+    print(os)
+    if os == 'Windows':
+        import winsound
+    else:
+        print('sorry your Opearting System can not use sound blaster now')
+    
+oscheck()
 bus()
 top.mainloop()
