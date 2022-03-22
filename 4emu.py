@@ -3,7 +3,7 @@ top=t.Tk()
 #variable
 running_file='Boot'
 ax=bx=cx=dx=0
-cs=0b11        #the maxium value is 0b11
+cs=0b0000       #the maxium value is 0b11
 es=ds=ss=0b0000
 ip=sp=bp=bi=0b0000
 lax=lbx=lcx=ldx=None
@@ -102,9 +102,8 @@ class cmd:
         monitor.reg()
 
 #------------------------------------------------translate mech-------------------------------------
-
         for i in range(0,2):
-            seg[cs*4+ip]=0  #mov的开头标志位为0
+            seg[cs*4+ip]=0  #mov的开头标志位为00
             ip=ip+1         #下一位
         seg[cs*4+ip]=reg_flag
         ip=ip+1
@@ -125,14 +124,26 @@ class cmd:
             seg[cs*4+ip]=fig_m
             ip=ip-1
         ip=ip+5
-#------------------------------------------------translation end-------------------------------------
+
+
+
     def movs(seg_reg,reg):
-        global cs,ds,es,ss
+        global cs,ds,es,ss,seg,ip
         if seg_reg == 'cs':
             if reg == 'ax':
+                fig=ax
                 cs=ax
+            if reg == 'bx':
+                fig=bx
+                cs=bx
             if reg == 'cx':
+                fig=cx
                 cs=cx
+            if reg == 'dx':
+                fig=dx
+                cs=dx
+            reg_flag=0
+            reg_de=0
         if seg_reg == 'ds':
             if reg == 'ax':
                 ds=ax
@@ -140,6 +151,30 @@ class cmd:
                 ds=cx
         monitor.seg_reg()
         print('mov',seg_reg,reg)
+        print(cs*4+ip)
+#------------------------------------------------translate mech-------------------------------------        
+        seg[cs*4+ip]=0  #movs的开头标志位为01
+        ip=ip+1
+        seg[cs*4+ip]=1
+        ip=ip+1
+        seg[cs*4+ip]=reg_flag
+        ip=ip+1
+        seg[cs*4+ip]=reg_de
+        #从第五位开始为立即数据
+        #from the 5th bit is immeidate data
+        if fig>15:
+            assert()
+        ip=ip+4
+        for i in range(0,4):
+            fig_m=fig%2
+            fig=int(fig/2)
+            seg[cs*4+ip]=fig_m
+            ip=ip-1
+        ip=ip+5
+        print(seg)
+
+
+
     def movp(ptr_reg,fig):
         global ip,bp,sp,bi
         if ptr_reg == 'ip':
@@ -197,15 +232,15 @@ class rom():
     def check():
         global cs,ip,adr,seg
         adr = cs * 4 + ip
+        print(adr)
 
 
         
 class boot:
     def bios():
         cmd.mov('ax',2)
-        cmd.mov('bx',1)
         cmd.mov('cx',12)
-        #cmd.jmp('cs','ax')
+        cmd.movs('cs','cx')
         rom.check()
 
 
@@ -244,10 +279,10 @@ b.place(x=710,y=250)
 
 class program:
     def load():
-        import complier as c
-        c.open_file()
-
-
+        import complier.complier as c
+        c.openfile()
+        #ram.load()
+        #cpu.read()
 
 def bus():
     rom.bios(0b1111)
