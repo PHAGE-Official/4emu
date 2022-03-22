@@ -74,7 +74,9 @@ class monitor:
         w=t.Canvas(width=320,height=240,bg='#000000')
         w.place(x=470,y=0)
         w.create_text(5,0,text='VPS is loading...',tag='boot',fill='#ff0000',anchor='nw')
-
+        monitor.reg()
+        monitor.seg_reg()
+        monitor.ptr_reg()
 
 
 #command class
@@ -117,14 +119,12 @@ class cmd:
             assert()
             #fig < 0b11
         ip=ip+4
-        print(fig)
         for i in range(0,4):
             fig_m=fig%2     #取余,二进制高位   mod and the result is binary high bit
             fig=int(fig/2)      #向下取整          round down
             seg[cs*4+ip]=fig_m
             ip=ip-1
         ip=ip+5
-        print(seg)
 #------------------------------------------------translation end-------------------------------------
     def movs(seg_reg,reg):
         global cs,ds,es,ss
@@ -160,8 +160,6 @@ class cmd:
         
 #CPU class
 class cpu:
-    def self_check():
-        print('CS set as',bin(cs))
     def read():
         pass
     def write():
@@ -196,8 +194,6 @@ class rom():
             cs=0
             ip=0
         adr=cs*4+ip
-        print(seg[adr])
-        print('default RAM:',len(seg),'bit')
     def check():
         global cs,ip,adr,seg
         adr = cs * 4 + ip
@@ -208,6 +204,7 @@ class boot:
     def bios():
         cmd.mov('ax',2)
         cmd.mov('bx',1)
+        cmd.mov('cx',12)
         #cmd.jmp('cs','ax')
         rom.check()
 
@@ -245,20 +242,25 @@ b=t.Button(text='power',width=10,command=hotkey.power)
 b.place(x=710,y=250)
 
 
+class program:
+    def load():
+        import complier as c
+        c.open_file()
+
+
 
 def bus():
-    cpu.self_check()
     rom.bios(0b1111)
     boot.bios()
     monitor.vga_opt()
     user.ramarrange()
+    program.load()
 
 
 
 def oscheck():
     import platform
     os=platform.system()
-    print(os)
     if os == 'Windows':
         import winsound
     else:
@@ -266,4 +268,7 @@ def oscheck():
     
 oscheck()
 bus()
+
+
+
 top.mainloop()
