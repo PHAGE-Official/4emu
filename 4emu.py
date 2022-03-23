@@ -340,7 +340,7 @@ class program:
     def load():
         import complier.complier as c
         global running_file
-        running_file=c.openfile()#执行函数同时接收返回值
+        running_file=c.openfile()#run functoin and receive the return value
         top.title('4emu      -'+running_file)
         #ram.load()
         #cpu.read()
