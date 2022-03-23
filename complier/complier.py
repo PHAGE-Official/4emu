@@ -1,6 +1,7 @@
 import tkinter.filedialog
 from tkinter import *
-def open_file():
-    filepath=tkinter.filedialog.askopenfilename(filetypes=[("*.exe,*.com","exe")])
+def openfile():
+    global filepath
+    filepath=tkinter.filedialog.askopenfilename(filetypes=[("*.exe,*.com,*.pea","exe")])
     #f = open(filepath,mode='r',encoding='utf-8')
-    print(filepath)
+    return filepath
