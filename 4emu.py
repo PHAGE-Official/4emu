@@ -3,7 +3,7 @@ top=t.Tk()
 #variable
 running_file='Boot'
 ax=bx=cx=dx=0
-cs=0b0000       #the maxium value is 0b11
+cs=0    #the maxium value is 0b11
 es=ds=ss=0b0000
 ip=sp=bp=bi=0b0000
 lax=lbx=lcx=ldx=None
@@ -18,8 +18,12 @@ powerstate=1
 top.title('4emu      -'+running_file)
 top.geometry('800x600+400+200')
 top.configure(bg='#cccccc')
+top.attributes('-alpha',0.90)
 top.resizable(0,0)
 
+#default UI
+l=t.Label(text='Command:',fg='#ffffff',bg='#f05400',width=10,anchor='w')
+l.place(x=160,y=0)
 
 
 #screen class
@@ -73,12 +77,22 @@ class monitor:
         global w
         w=t.Canvas(width=320,height=240,bg='#000000')
         w.place(x=470,y=0)
-        w.create_text(5,0,text='VPS is loading...',tag='boot',fill='#ff0000',anchor='nw')
+        w.create_text(5,0,text='VPS is loading...\nBIOS info:\n|-CPU:Virtual 4010\n|-RAM:default\n|-ROM:default',tag='boot',fill='#0cff00',anchor='nw')
         monitor.reg()
         monitor.seg_reg()
         monitor.ptr_reg()
-
-
+    def mech(extension):
+        global seg,cs,ip
+        me_x=600
+        me_y=100
+        if extension == 0:
+            ip=ip-8
+            value=str(seg[cs*4+ip])
+            for i in range(0,7):
+                ip=ip+1
+                value=value+str(seg[cs*4+ip])
+            l=t.Label(text=value,width=10,anchor='w')
+            l.place(x=240)
 #command class
 class cmd:
     def mov(reg,fig):
@@ -124,7 +138,7 @@ class cmd:
             seg[cs*4+ip]=fig_m
             ip=ip-1
         ip=ip+5
-
+        monitor.mech(0)
 
 
     def movs(seg_reg,reg):
@@ -146,12 +160,50 @@ class cmd:
             reg_de=0
         if seg_reg == 'ds':
             if reg == 'ax':
+                fig=ax
                 ds=ax
+            if reg == 'bx':
+                fig=bx
+                ds=bx
             if reg == 'cx':
+                fig=cx
                 ds=cx
+            if reg == 'dx':
+                fig=dx
+                ds=dx
+            reg_flag=0
+            reg_de=1
+        if seg_reg == 'ss':
+            if reg == 'ax':
+                fig=ax
+                ss=ax
+            if reg == 'bx':
+                fig=bx
+                ss=bx
+            if reg == 'cx':
+                fig=cx
+                ss=cx
+            if reg == 'dx':
+                fig=dx
+                ss=dx
+            reg_flag=1
+            reg_de=0
+        if seg_reg == 'es':
+            if reg == 'ax':
+                fig=ax
+                es=ax
+            if reg == 'bx':
+                fig=bx
+                es=bx
+            if reg == 'cx':
+                fig=cx
+                es=cx
+            if reg == 'dx':
+                fig=dx
+                es=dx
+            reg_flag=1
+            reg_de=1
         monitor.seg_reg()
-        print('mov',seg_reg,reg)
-        print(cs*4+ip)
 #------------------------------------------------translate mech-------------------------------------        
         seg[cs*4+ip]=0  #movs的开头标志位为01
         ip=ip+1
@@ -160,7 +212,7 @@ class cmd:
         seg[cs*4+ip]=reg_flag
         ip=ip+1
         seg[cs*4+ip]=reg_de
-        #从第五位开始为立即数据
+        #从第五位开始为立即数
         #from the 5th bit is immeidate data
         if fig>15:
             assert()
@@ -171,7 +223,6 @@ class cmd:
             seg[cs*4+ip]=fig_m
             ip=ip-1
         ip=ip+5
-        print(seg)
 
 
 
@@ -196,7 +247,13 @@ class cmd:
 #CPU class
 class cpu:
     def read():
-        pass
+        if mechcode == '00':
+            print('this is the mov command')
+        elif mechcode == '01':
+            print('this is movs command')
+        elif mechcode == '10':
+            pass
+        #注意:以11开头的标志位不代表任何指令只代表此段数据将扩展为16位指令
     def write():
         pass
 
@@ -239,8 +296,9 @@ class rom():
 class boot:
     def bios():
         cmd.mov('ax',2)
-        cmd.mov('cx',12)
-        cmd.movs('cs','cx')
+        cmd.mov('cx',9)
+        cmd.movs('ds','cx')
+        cmd.mov('bx',12)
         rom.check()
 
 
@@ -270,17 +328,20 @@ class hotkey():
         else:
             powerstate = 1
             bus()
-    def soundblaster():
+    def mute():
         pass
         # we will add a 4-bit sb later
 b=t.Button(text='power',width=10,command=hotkey.power)
 b.place(x=710,y=250)
-
+b1=t.Button(text='mute',width=10,command=hotkey.mute)
+b1.place(x=470,y=250)
 
 class program:
     def load():
         import complier.complier as c
-        c.openfile()
+        global running_file
+        running_file=c.openfile()#执行函数同时接收返回值
+        top.title('4emu      -'+running_file)
         #ram.load()
         #cpu.read()
 
@@ -288,16 +349,15 @@ def bus():
     rom.bios(0b1111)
     boot.bios()
     monitor.vga_opt()
-    user.ramarrange()
-    program.load()
-
+    
 
 
 def oscheck():
     import platform
     os=platform.system()
     if os == 'Windows':
-        import winsound
+        import soundblaster.win as sw
+        sw.info()
     else:
         print('sorry your Opearting System can not use sound blaster now')
     
@@ -305,5 +365,18 @@ oscheck()
 bus()
 
 
+menu=t.Menu(top)
 
+filemenu=t.Menu(menu,tearoff=0)
+cfgmenu=t.Menu(menu,tearoff=0)
+
+menu.add_cascade(label='File',menu=filemenu)
+filemenu.add_command(label='Open',command=program.load)
+filemenu.add_command(label='Exit',command=exit)
+
+
+menu.add_cascade(label='Config',menu=cfgmenu)
+cfgmenu.add_command(label='RAM',command=user.ramarrange)
+
+top.config(menu=menu)
 top.mainloop()
