@@ -3,22 +3,22 @@ top=t.Tk()
 #variable
 running_file='Boot'
 ax=bx=cx=dx=0
-cs=0    #the maxium value is 0b11
+cs=0    #the maxium value is 0b1111
 es=ds=ss=0b0000
 ip=sp=bp=bi=0b0000
 lax=lbx=lcx=ldx=None
 lcs=lds=lss=les=None
 lip=lbp=lsp=lbi=None
 lpr=None
+l1=l2=l3=None
 powerstate=1
 
 
 
 #set the window attributes
 top.title('4emu      -'+running_file)
-top.geometry('800x600+400+200')
+top.geometry('800x600')
 top.configure(bg='#cccccc')
-top.attributes('-alpha',0.90)
 top.resizable(0,0)
 
 #default UI
@@ -83,16 +83,45 @@ class monitor:
         monitor.ptr_reg()
     def mech(extension):
         global seg,cs,ip
-        me_x=600
-        me_y=100
+        me_y=25
+        global l1,l2,l3
+        if l1 != None and l2 != None and l3 != None:
+            l1.destroy()
+            l2.destroy()
+            l3.destroy()
         if extension == 0:
             ip=ip-8
             value=str(seg[cs*4+ip])
             for i in range(0,7):
                 ip=ip+1
                 value=value+str(seg[cs*4+ip])
-            l=t.Label(text=value,width=10,anchor='w')
-            l.place(x=240)
+            l1=t.Label(text=value,width=10,anchor='w',bg='#dd146b',fg='#ffffff')
+            l1.place(x=240,y=me_y)
+            
+            me_y=me_y-25
+            ip=ip-16
+            if cs * 4 + ip < 0:
+                value_last='Null'
+                l2=t.Label(text=value_last,width=10,anchor='w',bg='#3f8fcc',fg='#080808')
+                l2.place(x=240,y=me_y)
+
+            if cs * 4 + ip >= 0:
+                value_last=str(seg[cs*4+ip])
+                for i in range(0,7):
+                    ip=ip+1
+                    value_last=value_last+str(seg[cs*4+ip])
+                l2=t.Label(text=value_last,width=10,anchor='w',bg='#3f8fcc',fg='#080808')
+                l2.place(x=240,y=me_y)
+
+            me_y=me_y+50
+            ip=ip+8
+            value_next=str(seg[cs*4+ip])
+            for i in range(0,7):
+                ip=ip+1
+                value_next=value_next+str(seg[cs*4+ip])
+            l3=t.Label(text=value_next,width=10,anchor='w',bg='#f9e8a1',fg='#080808')
+            l3.place(x=240,y=me_y)
+
 #command class
 class cmd:
     def mov(reg,fig):
@@ -340,7 +369,7 @@ class program:
     def load():
         import complier.complier as c
         global running_file
-        running_file=c.openfile()#run functoin and receive the return value
+        running_file=c.openfile()#执行函数同时接收返回值
         top.title('4emu      -'+running_file)
         #ram.load()
         #cpu.read()
